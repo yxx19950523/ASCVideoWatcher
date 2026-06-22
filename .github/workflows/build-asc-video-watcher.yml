@@ -1,0 +1,58 @@
+name: Build ASC Video Watcher
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "tools/asc_video_watcher_py/**"
+      - ".github/workflows/build-asc-video-watcher.yml"
+
+jobs:
+  build-macos:
+    name: macOS APP
+    runs-on: macos-14
+    defaults:
+      run:
+        working-directory: tools/asc_video_watcher_py
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Build app
+        run: |
+          python -m PyInstaller \
+            --noconfirm \
+            --windowed \
+            --name "ASC视频监控助手" \
+            --collect-all playwright \
+            main.py
+          ditto -c -k --sequesterRsrc --keepParent "dist/ASC视频监控助手.app" "dist/ASC视频监控助手-macOS.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ASC视频监控助手-macOS
+          path: tools/asc_video_watcher_py/dist/ASC视频监控助手-macOS.zip
+
+  build-windows:
+    name: Windows EXE
+    runs-on: windows-2022
+    defaults:
+      run:
+        working-directory: tools/asc_video_watcher_py
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Build exe
+        run: |
+          python -m PyInstaller --noconfirm --windowed --name "ASC视频监控助手" --collect-all playwright main.py
+          Compress-Archive -Path "dist/ASC视频监控助手/*" -DestinationPath "dist/ASC视频监控助手-Windows.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ASC视频监控助手-Windows
+          path: tools/asc_video_watcher_py/dist/ASC视频监控助手-Windows.zip
