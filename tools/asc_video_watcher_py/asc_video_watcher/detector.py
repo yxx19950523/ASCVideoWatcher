@@ -275,7 +275,20 @@ REMOVE_FIRST_MEDIA_SCRIPT = r"""
   });
 
   if (candidates.length) return clickButton(candidates[0]);
-  return { ok: false, message: '悬停后没有找到左上角红色移除按钮' };
+
+  const textRemove = Array.from(plan.querySelectorAll('button, [role="button"], a')).filter((el) => {
+    if (!isVisible(el) || el.disabled || el.getAttribute('aria-disabled') === 'true') return false;
+    const text = textOf(el);
+    if (/全部删除|delete all|remove all/i.test(text)) return false;
+    return /移除.*App\s*预览|删除.*App\s*预览|移除.*视频|删除.*视频|remove.*preview|delete.*preview|remove.*video|delete.*video/i.test(text);
+  }).sort((a, b) => {
+    const ar = a.getBoundingClientRect();
+    const br = b.getBoundingClientRect();
+    return ar.top - br.top || ar.left - br.left;
+  });
+
+  if (textRemove.length) return clickButton(textRemove[0]);
+  return { ok: false, message: '没有找到第一位视频的移除按钮，也没有找到“移除 App 预览/删除视频”操作' };
 }
 """
 
