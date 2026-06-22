@@ -1,6 +1,6 @@
-name: Build ASC Video Watcher
+"name": "Build ASC Video Watcher"
 
-on:
+"on":
   workflow_dispatch:
   push:
     paths:
@@ -26,14 +26,14 @@ jobs:
           python -m PyInstaller \
             --noconfirm \
             --windowed \
-            --name "ASC视频监控助手" \
+            --name "ASCVideoWatcher" \
             --collect-all playwright \
             main.py
-          ditto -c -k --sequesterRsrc --keepParent "dist/ASC视频监控助手.app" "dist/ASC视频监控助手-macOS.zip"
+          ditto -c -k --sequesterRsrc --keepParent "dist/ASCVideoWatcher.app" "dist/ASCVideoWatcher-macOS.zip"
       - uses: actions/upload-artifact@v4
         with:
-          name: ASC视频监控助手-macOS
-          path: tools/asc_video_watcher_py/dist/ASC视频监控助手-macOS.zip
+          name: ASCVideoWatcher-macOS
+          path: tools/asc_video_watcher_py/dist/ASCVideoWatcher-macOS.zip
 
   build-windows:
     name: Windows EXE
@@ -49,10 +49,11 @@ jobs:
       - name: Install dependencies
         run: python -m pip install -r requirements.txt
       - name: Build exe
+        shell: pwsh
         run: |
-          python -m PyInstaller --noconfirm --windowed --name "ASC视频监控助手" --collect-all playwright main.py
-          Compress-Archive -Path "dist/ASC视频监控助手/*" -DestinationPath "dist/ASC视频监控助手-Windows.zip"
+          python -m PyInstaller --noconfirm --windowed --name "ASCVideoWatcher" --collect-all playwright main.py
+          Compress-Archive -Path "dist/ASCVideoWatcher/*" -DestinationPath "dist/ASCVideoWatcher-Windows.zip"
       - uses: actions/upload-artifact@v4
         with:
-          name: ASC视频监控助手-Windows
-          path: tools/asc_video_watcher_py/dist/ASC视频监控助手-Windows.zip
+          name: ASCVideoWatcher-Windows
+          path: tools/asc_video_watcher_py/dist/ASCVideoWatcher-Windows.zip
