@@ -156,6 +156,7 @@ class WatcherApp:
         self.auto_cycle_var = tk.BooleanVar()
         self.notify_var = tk.BooleanVar()
         self.sound_var = tk.BooleanVar()
+        self.refresh_var.trace_add("write", self.on_refresh_change)
 
         video_box = ttk.LabelFrame(form, text="第 1 步：选择视频", padding=10)
         video_box.grid(row=0, column=0, sticky="ew", pady=(0, 12))
@@ -207,6 +208,7 @@ class WatcherApp:
         self.phase_var = tk.StringVar(value="未开始")
         self.elapsed_var = tk.StringVar(value="00:00")
         self.next_refresh_var = tk.StringVar(value="--")
+        self.notice_var = tk.StringVar(value="暂无")
         self.video_var = tk.StringVar(value="未选择")
         self.cycle_var = tk.StringVar(value="0")
         for col, (title, var) in enumerate([("当前阶段", self.phase_var), ("总计时", self.elapsed_var), ("下次刷新", self.next_refresh_var)]):
@@ -216,6 +218,8 @@ class WatcherApp:
         ttk.Label(metrics, textvariable=self.cycle_var, font=("", 13, "bold")).grid(row=3, column=0, sticky="w")
         ttk.Label(metrics, text="当前视频").grid(row=2, column=1, sticky="w", pady=(10, 0))
         ttk.Label(metrics, textvariable=self.video_var).grid(row=3, column=1, columnspan=2, sticky="w")
+        ttk.Label(metrics, text="最新提示").grid(row=4, column=0, sticky="w", pady=(10, 0))
+        ttk.Label(metrics, textvariable=self.notice_var, font=("", 13, "bold")).grid(row=5, column=0, columnspan=3, sticky="w")
 
         hint = ttk.LabelFrame(body, text="操作提示", padding=12)
         hint.grid(row=1, column=1, sticky="ew", pady=(12, 12))
@@ -278,12 +282,36 @@ class WatcherApp:
         self.log_text.see("end")
         self.log_text.configure(state="disabled")
 
-    def notify(self, title: str, body: str) -> None:
-        if self.settings.sound_enabled:
+    def on_refresh_change(self, *_args) -> None:
+        try:
+            seconds = max(5, int(self.refresh_var.get() or 20))
+        except ValueError:
+            return
+        self.settings.refresh_seconds = seconds
+        if self.running:
+            self.next_refresh_at = time.time() + seconds
+            self.next_refresh_var.set(f"{seconds} 秒")
+
+    def play_sound(self) -> None:
+        try:
+            if platform.system() == "Windows":
+                import winsound
+                winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+                return
+            if platform.system() == "Darwin":
+                subprocess.Popen(["osascript", "-e", "beep 2"])
+                return
+            self.root.bell()
+        except Exception:
             try:
                 self.root.bell()
             except Exception:
                 pass
+
+    def notify(self, title: str, body: str) -> None:
+        self.notice_var.set(f"{title}：{body}")
+        if self.settings.sound_enabled:
+            self.play_sound()
         if self.settings.notify_enabled:
             self.toast(title, body)
         self.log(f"{title}：{body}")
@@ -368,6 +396,7 @@ class WatcherApp:
         self.ready_btn.configure(state="disabled")
         self.status_var.set("开始监听")
         self.phase_var.set("页面已确认，准备刷新和上传")
+        self.notice_var.set("页面已准备好：开始刷新、上传和监听")
         self.log("用户确认页面已准备好，开始执行刷新、上传和监听。")
 
     def stop(self) -> None:
@@ -522,6 +551,7 @@ class WatcherApp:
             elif event == "browser_opened":
                 self.status_var.set("等待页面确认")
                 self.phase_var.set("请在网页操作完成后点击确认按钮")
+                self.notice_var.set("浏览器已打开：请登录并进入 PPO 测试方案页面")
                 self.ready_btn.configure(state="normal")
                 self.log(str(payload))
             elif event == "error":
@@ -536,6 +566,7 @@ class WatcherApp:
                 self.placeholder_at = 0
                 self.status_var.set("已上传")
                 self.phase_var.set(f"第 {self.cycle_count} 轮：等待灰色占位图")
+                self.notice_var.set(f"第 {self.cycle_count} 轮已上传，等待灰色占位图")
                 self.log(f"第 {self.cycle_count} 轮已上传同一个视频：{payload}")
             elif event == "phase":
                 self.handle_phase(payload)
@@ -543,8 +574,10 @@ class WatcherApp:
                 if payload.get("ok"):
                     self.status_var.set("已移除")
                     self.phase_var.set("已移除后台视频，准备重传")
+                    self.notice_var.set("已移除后台第一位视频，准备重传")
                     self.log(f"已移除后台第一位视频：{payload.get('message')}")
                 else:
+                    self.notice_var.set(f"移除后台视频失败：{payload.get('message')}")
                     self.log(f"移除后台视频失败：{payload.get('message')}")
 
         self.root.after(200, self.drain_events)
