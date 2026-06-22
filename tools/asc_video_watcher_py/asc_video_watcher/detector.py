@@ -85,7 +85,15 @@ FIRST_MEDIA_STATUS_SCRIPT = r"""
   const plans = findPlans();
   const plan = plans[Math.max(0, Number(planIndex) || 0)] || null;
   if (!plan) {
-    return { phase: 'waiting', reason: '没有找到测试方案', planCount: 0 };
+    const bodyText = document.body ? document.body.innerText || '' : '';
+    return {
+      phase: 'waiting',
+      reason: '没有找到测试方案',
+      planCount: 0,
+      chooseFileCount: (bodyText.match(/选择文件/g) || []).length,
+      previewCounterCount: (bodyText.match(/\d+\s*\/\s*\d+\s*个\s*App\s*预览/g) || []).length,
+      testPlanTextCount: (bodyText.match(/测试方案/g) || []).length
+    };
   }
 
   const media = findFirstMedia(plan);

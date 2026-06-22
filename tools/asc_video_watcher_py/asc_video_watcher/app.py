@@ -463,6 +463,7 @@ class WatcherApp:
                             await page.wait_for_timeout(2500)
 
                     result = await self.detect_first_media(page)
+                    self.events.put(("detect_debug", result))
                     self.events.put(("phase", result))
 
                     if uploaded and result.get("phase") == "no_video":
@@ -621,6 +622,17 @@ class WatcherApp:
                 self.log(f"第 {self.cycle_count} 轮已上传同一个视频：{payload}")
             elif event == "phase":
                 self.handle_phase(payload)
+            elif event == "detect_debug":
+                self.log(
+                    "识别结果："
+                    f"phase={payload.get('phase')}，"
+                    f"reason={payload.get('reason') or '-'}，"
+                    f"planCount={payload.get('planCount')}，"
+                    f"appPreviewCount={payload.get('appPreviewCount')}，"
+                    f"chooseFileCount={payload.get('chooseFileCount')}，"
+                    f"previewCounterCount={payload.get('previewCounterCount')}，"
+                    f"testPlanTextCount={payload.get('testPlanTextCount')}"
+                )
             elif event == "removed":
                 if payload.get("ok"):
                     self.status_var.set("已移除")
