@@ -55,7 +55,7 @@ class Settings:
     remove_selector: str = ""
     confirm_selector: str = ""
     auto_cycle: bool = True
-    notify_enabled: bool = True
+    notify_enabled: bool = False
     sound_enabled: bool = True
     browser_channel: str = "chrome"
 
@@ -114,7 +114,7 @@ class WatcherApp:
             remove_selector=self.remove_selector_var.get().strip(),
             confirm_selector=self.confirm_selector_var.get().strip(),
             auto_cycle=bool(self.auto_cycle_var.get()),
-            notify_enabled=bool(self.notify_var.get()),
+            notify_enabled=False,
             sound_enabled=bool(self.sound_var.get()),
             browser_channel=self.browser_var.get().strip() or "chrome",
         )
@@ -188,8 +188,7 @@ class WatcherApp:
 
         checkbox_row = browser_row + 2
         ttk.Checkbutton(form, text="预览出现后移除后台视频并重传同一个视频", variable=self.auto_cycle_var).grid(row=checkbox_row, column=0, sticky="w", pady=(10, 0))
-        ttk.Checkbutton(form, text="系统/应用通知", variable=self.notify_var).grid(row=checkbox_row + 1, column=0, sticky="w", pady=(5, 0))
-        ttk.Checkbutton(form, text="声音提示", variable=self.sound_var).grid(row=checkbox_row + 2, column=0, sticky="w", pady=(5, 0))
+        ttk.Checkbutton(form, text="声音提示", variable=self.sound_var).grid(row=checkbox_row + 1, column=0, sticky="w", pady=(5, 0))
 
         buttons = ttk.Frame(form)
         buttons.grid(row=checkbox_row + 3, column=0, sticky="ew", pady=(12, 0))
@@ -226,24 +225,10 @@ class WatcherApp:
         ttk.Label(hint, text="先在 App Store Connect 手动切到主语言国家，并停留在包含测试方案的页面；程序默认处理页面中的第一个测试方案。").grid(row=0, column=0, sticky="w")
         ttk.Label(hint, text="视频上传后会排到第一位。程序监控第一位媒体：灰色占位响一次，预览图出现再响一次，然后悬停并点击左上角红色移除按钮。").grid(row=1, column=0, sticky="w", pady=(5, 0))
 
-        advanced = ttk.LabelFrame(body, text="高级选择器（默认不用填）", padding=12)
-        advanced.grid(row=2, column=1, sticky="ew", pady=(0, 12))
-        advanced.columnconfigure((0, 1), weight=1)
-        advanced_fields = [
-            ("测试方案选择器", self.plan_selector_var),
-            ("第一位媒体选择器", self.media_selector_var),
-            ("网页“选择文件”按钮选择器", self.upload_button_selector_var),
-            ("备用上传 input 选择器", self.upload_selector_var),
-            ("灰色占位选择器", self.placeholder_var),
-            ("预览图选择器", self.preview_var),
-            ("红色移除按钮选择器", self.remove_selector_var),
-            ("删除确认按钮选择器", self.confirm_selector_var),
-        ]
-        for index, (label, var) in enumerate(advanced_fields):
-            row = (index // 2) * 2
-            col = index % 2
-            ttk.Label(advanced, text=label).grid(row=row, column=col, sticky="w", padx=(0 if col == 0 else 10, 0), pady=(0 if row == 0 else 7, 3))
-            ttk.Entry(advanced, textvariable=var).grid(row=row + 1, column=col, sticky="ew", padx=(0 if col == 0 else 10, 0))
+        auto_info = ttk.LabelFrame(body, text="自动识别", padding=12)
+        auto_info.grid(row=2, column=1, sticky="ew", pady=(0, 12))
+        ttk.Label(auto_info, text="无需手动填写选择器。程序会自动识别：第一个测试方案、页面里的“选择文件”、媒体列表第一位、悬停后左上角红色移除按钮。").grid(row=0, column=0, sticky="w")
+        ttk.Label(auto_info, text="如果某一步失败，请直接看运行日志里的失败原因，把那一句发给我即可。").grid(row=1, column=0, sticky="w", pady=(5, 0))
 
         log_frame = ttk.LabelFrame(body, text="运行日志", padding=8)
         log_frame.grid(row=3, column=1, sticky="nsew")
@@ -292,14 +277,17 @@ class WatcherApp:
             self.next_refresh_at = time.time() + seconds
             self.next_refresh_var.set(f"{seconds} 秒")
 
-    def play_sound(self) -> None:
+    def play_sound(self, kind: str = "info") -> None:
         try:
             if platform.system() == "Windows":
                 import winsound
-                winsound.MessageBeep(winsound.MB_ICONEXCLAMATION)
+                frequency = 660 if kind == "placeholder" else 1040 if kind == "ready" else 880
+                duration = 260 if kind == "placeholder" else 420 if kind == "ready" else 220
+                winsound.Beep(frequency, duration)
                 return
             if platform.system() == "Darwin":
-                subprocess.Popen(["osascript", "-e", "beep 2"])
+                sound = "/System/Library/Sounds/Ping.aiff" if kind == "placeholder" else "/System/Library/Sounds/Glass.aiff"
+                subprocess.Popen(["afplay", sound])
                 return
             self.root.bell()
         except Exception:
@@ -308,12 +296,10 @@ class WatcherApp:
             except Exception:
                 pass
 
-    def notify(self, title: str, body: str) -> None:
+    def notify(self, title: str, body: str, kind: str = "info") -> None:
         self.notice_var.set(f"{title}：{body}")
         if self.settings.sound_enabled:
-            self.play_sound()
-        if self.settings.notify_enabled:
-            self.toast(title, body)
+            self.play_sound(kind)
         self.log(f"{title}：{body}")
 
     def toast(self, title: str, body: str) -> None:
@@ -323,14 +309,18 @@ class WatcherApp:
                 subprocess.Popen(["osascript", "-e", script])
                 return
             if platform.system() == "Windows":
+                safe_title = title.replace("'", "''")
+                safe_body = body.replace("'", "''")
                 subprocess.Popen([
                     "powershell",
                     "-NoProfile",
                     "-Command",
                     f"[reflection.assembly]::loadwithpartialname('System.Windows.Forms') > $null; "
+                    f"[reflection.assembly]::loadwithpartialname('System.Drawing') > $null; "
                     f"$n=new-object system.windows.forms.notifyicon; "
                     f"$n.icon=[system.drawing.systemicons]::information; "
-                    f"$n.visible=$true; $n.showballoontip(5000,{title!r},{body!r},'Info')"
+                    f"$n.visible=$true; $n.showballoontip(5000,'{safe_title}','{safe_body}','Info'); "
+                    f"Start-Sleep -Seconds 6; $n.dispose()"
                 ], creationflags=0x08000000)
                 return
         except Exception:
@@ -346,6 +336,7 @@ class WatcherApp:
             self.video_path = path
             self.selected_video_var.set(Path(path).name)
             self.video_var.set(Path(path).name)
+            self.notice_var.set(f"已选择视频：{Path(path).name}，下一次上传会使用它")
             self.log(f"已选择视频：{path}")
 
     def open_logs(self) -> None:
@@ -478,6 +469,10 @@ class WatcherApp:
             await context.close()
 
     async def upload_video(self, page) -> bool:
+        video_path = self.video_path
+        if not video_path or not Path(video_path).exists():
+            self.events.put(("log", f"当前选择的视频不存在：{video_path}"))
+            return False
         try:
             await page.wait_for_timeout(1500)
             text_button = page.get_by_text("选择文件", exact=True)
@@ -487,7 +482,7 @@ class WatcherApp:
                 async with page.expect_file_chooser(timeout=8000) as chooser_info:
                     await text_button.nth(index).click()
                 chooser = await chooser_info.value
-                await chooser.set_files(self.video_path)
+                await chooser.set_files(video_path)
                 self.events.put(("log", f"已点击第 {index + 1} 个“选择文件”按钮，并把视频交给 ASC 文件选择器。"))
                 return True
         except Exception as exc:
@@ -504,7 +499,7 @@ class WatcherApp:
                     self.events.put(("log", f"点击网页选择文件按钮失败：{result.get('message')}"))
                     raise RuntimeError(result.get("message"))
             chooser = await chooser_info.value
-            await chooser.set_files(self.video_path)
+            await chooser.set_files(video_path)
             self.events.put(("log", "已点击网页“选择文件”按钮，并把视频交给 ASC 文件选择器。"))
             return True
         except Exception as exc:
@@ -517,7 +512,7 @@ class WatcherApp:
             self.events.put(("log", f"没有找到备用上传控件：{selector}。如果页面还没登录或未进入测试方案页，请先手动切过去。"))
             return False
         index = min(self.settings.plan_index, count - 1)
-        await locator.nth(index).set_input_files(self.video_path)
+        await locator.nth(index).set_input_files(video_path)
         self.events.put(("log", f"已通过备用 input 上传：{selector}"))
         return True
 
@@ -531,13 +526,50 @@ class WatcherApp:
         })
 
     async def remove_remote_video(self, page) -> dict:
-        return await page.evaluate(REMOVE_FIRST_MEDIA_SCRIPT, {
+        result = await page.evaluate(REMOVE_FIRST_MEDIA_SCRIPT, {
             "planIndex": self.settings.plan_index,
             "planSelector": self.settings.plan_selector,
             "mediaSelector": self.settings.media_selector,
             "removeSelector": self.settings.remove_selector,
             "confirmSelector": self.settings.confirm_selector,
         })
+        if result.get("ok"):
+            return result
+
+        if self.settings.browser_channel not in {"chrome", "msedge", "chromium"}:
+            result["message"] = f"{result.get('message')}；当前浏览器不支持 CDP 后台鼠标事件，已避免移动系统鼠标"
+            return result
+
+        status = await self.detect_first_media(page)
+        rect = status.get("rect") or {}
+        if not rect:
+            return result
+
+        try:
+            session = await page.context.new_cdp_session(page)
+            x = float(rect.get("x", 0)) + 12
+            y = float(rect.get("y", 0)) + 12
+            await session.send("Input.dispatchMouseEvent", {
+                "type": "mouseMoved",
+                "x": x,
+                "y": y,
+                "button": "none",
+                "buttons": 0,
+            })
+            await page.wait_for_timeout(700)
+            result = await page.evaluate(REMOVE_FIRST_MEDIA_SCRIPT, {
+                "planIndex": self.settings.plan_index,
+                "planSelector": self.settings.plan_selector,
+                "mediaSelector": self.settings.media_selector,
+                "removeSelector": self.settings.remove_selector,
+                "confirmSelector": self.settings.confirm_selector,
+            })
+            if result.get("ok"):
+                result["message"] = f"CDP 后台悬停后移除成功：{result.get('message')}"
+        except Exception as exc:
+            result["message"] = f"{result.get('message')}；CDP 后台悬停失败：{exc}"
+
+        return result
 
     def drain_events(self) -> None:
         while True:
@@ -589,14 +621,14 @@ class WatcherApp:
             self.last_phase = "placeholder"
             self.status_var.set("灰色占位图")
             self.phase_var.set("第一位媒体是灰色占位图")
-            self.notify("检测到灰色占位图", "第一位视频正在处理，已开始记录占位阶段。")
+            self.notify("检测到灰色占位图", "第一位视频正在处理，已开始记录占位阶段。", "placeholder")
         elif phase == "ready" and self.last_phase != "ready":
             self.last_phase = "ready"
             self.status_var.set("可预览")
             self.phase_var.set("第一位媒体已出现视频预览图")
             total = fmt_duration(time.time() - self.started_at)
             stage = fmt_duration(time.time() - self.placeholder_at) if self.placeholder_at else "--"
-            self.notify("视频预览图已出现", f"总耗时 {total}，占位图阶段 {stage}。即将移除后台视频并重传。")
+            self.notify("视频预览图已出现", f"总耗时 {total}，占位图阶段 {stage}。即将移除后台视频并重传。", "ready")
         elif phase == "waiting" and self.last_phase == "idle":
             self.phase_var.set(result.get("reason") or "等待第一位媒体变化")
 

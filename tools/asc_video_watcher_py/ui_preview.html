@@ -286,7 +286,6 @@
         <section>
           <label class="check"><input type="checkbox" checked> 预览出现后移除后台视频并重传</label>
           <label class="check"><input type="checkbox" checked> 声音提示</label>
-          <label class="check"><input type="checkbox" checked> 系统/应用通知</label>
         </section>
 
         <div class="actions">
@@ -307,25 +306,9 @@
         </div>
 
         <div class="card">
-          <div class="section-title">高级选择器（默认不用填）</div>
-          <div class="two">
-            <div>
-              <label>测试方案选择器</label>
-              <input placeholder="默认自动找第一个测试方案">
-            </div>
-            <div>
-              <label>第一位媒体选择器</label>
-              <input placeholder="默认自动取媒体条最左侧">
-            </div>
-            <div>
-              <label>网页“选择文件”按钮选择器</label>
-              <input placeholder="默认点击测试方案里的“选择文件”">
-            </div>
-            <div>
-              <label>红色移除按钮选择器</label>
-              <input placeholder="默认悬停第一位媒体后找左上角按钮">
-            </div>
-          </div>
+          <div class="section-title">自动识别</div>
+          <div class="hint">无需手动填写选择器。程序会自动识别第一个测试方案、页面里的“选择文件”、媒体列表第一位、悬停后左上角红色移除按钮。</div>
+          <div class="hint">如果某一步失败，直接看运行日志里的失败原因，把那一句发回来即可。</div>
         </div>
 
         <div class="card">
