@@ -76,6 +76,7 @@ class WatcherApp:
         self.events: queue.Queue[tuple[str, object]] = queue.Queue()
         self.worker: threading.Thread | None = None
         self.stop_event = threading.Event()
+        self.ready_event = threading.Event()
         self.running = False
         self.started_at = 0.0
         self.placeholder_at = 0.0
@@ -192,11 +193,13 @@ class WatcherApp:
         buttons = ttk.Frame(form)
         buttons.grid(row=checkbox_row + 3, column=0, sticky="ew", pady=(12, 0))
         buttons.columnconfigure((0, 1), weight=1)
-        self.start_btn = ttk.Button(buttons, text="下一步：打开页面并开始循环", command=self.start)
+        self.start_btn = ttk.Button(buttons, text="第 2 步：打开浏览器", command=self.start)
         self.start_btn.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 8))
+        self.ready_btn = ttk.Button(buttons, text="页面已准备好，开始监听", command=self.mark_page_ready, state="disabled")
+        self.ready_btn.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(0, 8))
         self.stop_btn = ttk.Button(buttons, text="停止", command=self.stop, state="disabled")
-        self.stop_btn.grid(row=1, column=0, sticky="ew", padx=(0, 6))
-        ttk.Button(buttons, text="打开日志", command=self.open_logs).grid(row=1, column=1, sticky="ew", padx=(6, 0))
+        self.stop_btn.grid(row=2, column=0, sticky="ew", padx=(0, 6))
+        ttk.Button(buttons, text="打开日志", command=self.open_logs).grid(row=2, column=1, sticky="ew", padx=(6, 0))
 
         metrics = ttk.LabelFrame(body, text="状态", padding=12)
         metrics.grid(row=0, column=1, sticky="ew")
@@ -343,26 +346,39 @@ class WatcherApp:
 
         self.running = True
         self.stop_event.clear()
+        self.ready_event.clear()
         self.started_at = time.time()
         self.placeholder_at = 0
         self.last_phase = "idle"
         self.cycle_count = 0
         self.cycle_var.set("0")
         self.status_var.set("监控中")
-        self.phase_var.set("准备上传")
+        self.phase_var.set("浏览器启动中")
         self.start_btn.configure(state="disabled")
+        self.ready_btn.configure(state="disabled")
         self.stop_btn.configure(state="normal")
-        self.log(f"开始循环，每 {self.settings.refresh_seconds} 秒检测一次。")
+        self.log("正在打开浏览器。请先在网页里登录并进入 PPO 测试方案页面。")
         self.worker = threading.Thread(target=self.worker_entry, daemon=True)
         self.worker.start()
+
+    def mark_page_ready(self) -> None:
+        if not self.running:
+            return
+        self.ready_event.set()
+        self.ready_btn.configure(state="disabled")
+        self.status_var.set("开始监听")
+        self.phase_var.set("页面已确认，准备刷新和上传")
+        self.log("用户确认页面已准备好，开始执行刷新、上传和监听。")
 
     def stop(self) -> None:
         if not self.running:
             return
         self.stop_event.set()
+        self.ready_event.set()
         self.running = False
         self.status_var.set("已停止")
         self.start_btn.configure(state="normal")
+        self.ready_btn.configure(state="disabled")
         self.stop_btn.configure(state="disabled")
         self.next_refresh_var.set("--")
         self.log("监控已停止。")
@@ -393,12 +409,19 @@ class WatcherApp:
 
             page = context.pages[0] if context.pages else await context.new_page()
             await page.goto(self.settings.product_url)
-            self.events.put(("log", "浏览器已打开。请登录并切到主语言国家的 PPO 测试方案页面。"))
+            self.events.put(("browser_opened", "浏览器已打开。请登录并切到主语言国家的 PPO 测试方案页面，然后回到工具点击“页面已准备好，开始监听”。"))
+
+            while not self.ready_event.is_set() and not self.stop_event.is_set():
+                await asyncio.sleep(0.2)
 
             uploaded = False
             while not self.stop_event.is_set():
                 self.next_refresh_at = time.time() + self.settings.refresh_seconds
                 try:
+                    self.events.put(("log", "刷新网页，准备执行本轮监听。"))
+                    await page.reload(wait_until="domcontentloaded", timeout=60000)
+                    await page.wait_for_timeout(1800)
+
                     if not uploaded:
                         uploaded = await self.upload_video(page)
                         if uploaded:
@@ -479,6 +502,11 @@ class WatcherApp:
                 break
 
             if event == "log":
+                self.log(str(payload))
+            elif event == "browser_opened":
+                self.status_var.set("等待页面确认")
+                self.phase_var.set("请在网页操作完成后点击确认按钮")
+                self.ready_btn.configure(state="normal")
                 self.log(str(payload))
             elif event == "error":
                 self.status_var.set("异常")
