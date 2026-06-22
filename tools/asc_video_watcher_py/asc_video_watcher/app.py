@@ -16,7 +16,7 @@ from tkinter import filedialog, messagebox, ttk
 
 from playwright.async_api import async_playwright
 
-from .detector import FIRST_MEDIA_STATUS_SCRIPT, REMOVE_FIRST_MEDIA_SCRIPT
+from .detector import CLICK_UPLOAD_BUTTON_SCRIPT, FIRST_MEDIA_STATUS_SCRIPT, REMOVE_FIRST_MEDIA_SCRIPT
 
 
 APP_NAME = "ASC视频监控助手"
@@ -48,6 +48,7 @@ class Settings:
     plan_index: int = 0
     plan_selector: str = ""
     media_selector: str = ""
+    upload_button_selector: str = ""
     upload_selector: str = "input[type=file]"
     placeholder_selector: str = ""
     preview_selector: str = ""
@@ -105,6 +106,7 @@ class WatcherApp:
             plan_index=max(0, int(self.plan_index_var.get() or 0)),
             plan_selector=self.plan_selector_var.get().strip(),
             media_selector=self.media_selector_var.get().strip(),
+            upload_button_selector=self.upload_button_selector_var.get().strip(),
             upload_selector=self.upload_selector_var.get().strip() or "input[type=file]",
             placeholder_selector=self.placeholder_var.get().strip(),
             preview_selector=self.preview_var.get().strip(),
@@ -143,6 +145,7 @@ class WatcherApp:
         self.plan_index_var = tk.StringVar()
         self.plan_selector_var = tk.StringVar()
         self.media_selector_var = tk.StringVar()
+        self.upload_button_selector_var = tk.StringVar()
         self.upload_selector_var = tk.StringVar()
         self.placeholder_var = tk.StringVar()
         self.preview_var = tk.StringVar()
@@ -159,7 +162,8 @@ class WatcherApp:
             ("测试方案序号（0=第一个）", self.plan_index_var, 12),
             ("测试方案选择器（可选）", self.plan_selector_var, 42),
             ("第一位媒体选择器（可选）", self.media_selector_var, 42),
-            ("上传 input 选择器", self.upload_selector_var, 42),
+            ("网页“选择文件”按钮选择器（可选）", self.upload_button_selector_var, 42),
+            ("备用上传 input 选择器", self.upload_selector_var, 42),
             ("灰色占位选择器（可选）", self.placeholder_var, 42),
             ("预览图选择器（可选）", self.preview_var, 42),
             ("红色移除按钮选择器（可选）", self.remove_selector_var, 42),
@@ -222,6 +226,7 @@ class WatcherApp:
         self.plan_index_var.set(str(self.settings.plan_index))
         self.plan_selector_var.set(self.settings.plan_selector)
         self.media_selector_var.set(self.settings.media_selector)
+        self.upload_button_selector_var.set(self.settings.upload_button_selector)
         self.upload_selector_var.set(self.settings.upload_selector)
         self.placeholder_var.set(self.settings.placeholder_selector)
         self.preview_var.set(self.settings.preview_selector)
@@ -386,14 +391,32 @@ class WatcherApp:
             await context.close()
 
     async def upload_video(self, page) -> bool:
+        try:
+            async with page.expect_file_chooser(timeout=5000) as chooser_info:
+                result = await page.evaluate(CLICK_UPLOAD_BUTTON_SCRIPT, {
+                    "planIndex": self.settings.plan_index,
+                    "planSelector": self.settings.plan_selector,
+                    "uploadButtonSelector": self.settings.upload_button_selector,
+                })
+                if not result.get("ok"):
+                    self.events.put(("log", f"点击网页选择文件按钮失败：{result.get('message')}"))
+                    raise RuntimeError(result.get("message"))
+            chooser = await chooser_info.value
+            await chooser.set_files(self.video_path)
+            self.events.put(("log", "已点击网页“选择文件”按钮，并把视频交给 ASC 文件选择器。"))
+            return True
+        except Exception as exc:
+            self.events.put(("log", f"网页按钮上传失败，尝试备用 input 上传：{exc}"))
+
         selector = self.settings.upload_selector or "input[type=file]"
         locator = page.locator(selector)
         count = await locator.count()
         if count == 0:
-            self.events.put(("log", f"没有找到上传控件：{selector}。如果页面还没登录或未进入测试方案页，请先手动切过去。"))
+            self.events.put(("log", f"没有找到备用上传控件：{selector}。如果页面还没登录或未进入测试方案页，请先手动切过去。"))
             return False
         index = min(self.settings.plan_index, count - 1)
         await locator.nth(index).set_input_files(self.video_path)
+        self.events.put(("log", f"已通过备用 input 上传：{selector}"))
         return True
 
     async def detect_first_media(self, page) -> dict:

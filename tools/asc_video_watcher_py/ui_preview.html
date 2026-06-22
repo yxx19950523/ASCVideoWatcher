@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ASC视频监控助手 - 界面预览</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #f4f6f9;
+      color: #1f2933;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 24px;
+      padding: 18px 24px 14px;
+      background: #ffffff;
+      border-bottom: 1px solid #d9dee8;
+    }
+    h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.2;
+    }
+    .sub {
+      margin-top: 6px;
+      color: #657286;
+      font-size: 14px;
+    }
+    .badge {
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: #1f6feb;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    main {
+      display: grid;
+      grid-template-columns: 390px minmax(0, 1fr);
+      gap: 16px;
+      padding: 16px;
+    }
+    .panel, .card {
+      border: 1px solid #d9dee8;
+      border-radius: 8px;
+      background: #ffffff;
+    }
+    .panel {
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .section-title {
+      margin: 0 0 10px;
+      font-size: 15px;
+      font-weight: 800;
+    }
+    label {
+      display: block;
+      margin: 9px 0 4px;
+      color: #354154;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    input {
+      width: 100%;
+      min-height: 34px;
+      border: 1px solid #c4ccd8;
+      border-radius: 6px;
+      padding: 7px 9px;
+      font: inherit;
+      font-size: 13px;
+      background: #fff;
+    }
+    .two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .check {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin-top: 10px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    .check input {
+      width: auto;
+      min-height: auto;
+    }
+    .actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+    button {
+      min-height: 38px;
+      border: 1px solid #b8c1cf;
+      border-radius: 6px;
+      background: #fff;
+      color: #1f2933;
+      font: inherit;
+      font-size: 14px;
+      font-weight: 800;
+    }
+    button.primary {
+      border-color: #1f6feb;
+      background: #1f6feb;
+      color: #fff;
+    }
+    .right {
+      display: grid;
+      grid-template-rows: auto auto 1fr;
+      gap: 16px;
+      min-width: 0;
+    }
+    .card {
+      padding: 14px;
+    }
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .metric {
+      border: 1px solid #e0e5ee;
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfe;
+      min-height: 72px;
+    }
+    .metric span {
+      display: block;
+      color: #69778b;
+      font-size: 13px;
+    }
+    .metric strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 18px;
+    }
+    .hint {
+      line-height: 1.7;
+      color: #475569;
+      font-size: 14px;
+    }
+    .log {
+      height: 100%;
+      min-height: 310px;
+      padding: 0;
+      overflow: hidden;
+    }
+    .log-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 14px;
+      border-bottom: 1px solid #e0e5ee;
+      font-weight: 800;
+    }
+    ol {
+      margin: 0;
+      padding: 12px 18px 18px 34px;
+      color: #3d495c;
+      font-size: 13px;
+      line-height: 1.7;
+    }
+    .media-strip {
+      margin-top: 10px;
+      border: 1px solid #d9dee8;
+      border-radius: 8px;
+      padding: 16px;
+      background: #fafbfe;
+    }
+    .scheme-title {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 16px;
+      font-weight: 800;
+    }
+    .thumbs {
+      display: grid;
+      grid-template-columns: 190px repeat(4, 190px);
+      gap: 10px;
+      overflow: hidden;
+    }
+    .thumb {
+      height: 92px;
+      border-radius: 8px;
+      background: #795f51;
+      position: relative;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 13px;
+    }
+    .thumb.video {
+      background: #e5e7eb;
+      color: #7a8594;
+    }
+    .remove {
+      position: absolute;
+      left: -11px;
+      top: -11px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #d30f2d;
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 900;
+    }
+    .caption {
+      margin-top: 10px;
+      color: #4b5565;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>ASC视频监控助手</h1>
+        <div class="sub">点击网页“选择文件”按钮上传同一个视频，监控第一位媒体，出现预览后移除并循环重传</div>
+      </div>
+      <div class="badge">监控中</div>
+    </header>
+
+    <main>
+      <aside class="panel">
+        <section>
+          <div class="section-title">基础设置</div>
+          <label>产品优化页面地址</label>
+          <input value="https://appstoreconnect.apple.com/apps/...">
+          <div class="two">
+            <div>
+              <label>刷新间隔（秒）</label>
+              <input value="20">
+            </div>
+            <div>
+              <label>测试方案序号</label>
+              <input value="0">
+            </div>
+          </div>
+          <label>当前视频</label>
+          <input value="demo-video.mov" readonly>
+        </section>
+
+        <section>
+          <div class="section-title">页面定位</div>
+          <label>测试方案选择器（可选）</label>
+          <input placeholder="默认自动找第一个测试方案">
+          <label>第一位媒体选择器（可选）</label>
+          <input placeholder="默认自动取媒体条最左侧">
+          <label>网页“选择文件”按钮选择器（可选）</label>
+          <input placeholder="默认点击测试方案里的“选择文件”">
+          <label>红色移除按钮选择器（可选）</label>
+          <input placeholder="默认悬停第一位媒体后找左上角红色按钮">
+        </section>
+
+        <section>
+          <label class="check"><input type="checkbox" checked> 预览出现后移除后台视频并重传</label>
+          <label class="check"><input type="checkbox" checked> 声音提示</label>
+          <label class="check"><input type="checkbox" checked> 系统/应用通知</label>
+        </section>
+
+        <div class="actions">
+          <button class="primary">开始循环</button>
+          <button>停止</button>
+          <button>选择一个视频</button>
+          <button>打开日志</button>
+        </div>
+      </aside>
+
+      <section class="right">
+        <div class="card metrics">
+          <div class="metric"><span>当前阶段</span><strong>第一位媒体是灰色占位图</strong></div>
+          <div class="metric"><span>总计时</span><strong>03:18</strong></div>
+          <div class="metric"><span>下次检测</span><strong>12 秒</strong></div>
+          <div class="metric"><span>循环次数</span><strong>7</strong></div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">测试方案预览</div>
+          <div class="hint">程序默认处理主语言页面里的第一个测试方案。上传后视频会排到第一位；悬停第一位媒体时，左上角红色移除按钮会出现。</div>
+          <div class="media-strip">
+            <div class="scheme-title"><span>测试方案 B</span><span>选择文件 | 全部删除</span></div>
+            <div class="thumbs">
+              <div class="thumb video"><span class="remove">−</span>☁ 灰色占位 / 视频预览</div>
+              <div class="thumb">截图 1</div>
+              <div class="thumb">截图 2</div>
+              <div class="thumb">截图 3</div>
+              <div class="thumb">截图 4</div>
+            </div>
+            <div class="caption">1/3 个 App 预览　|　6/10 张截屏　|　选择文件　|　全部删除</div>
+          </div>
+        </div>
+
+        <div class="card log">
+          <div class="log-head"><span>运行日志</span><span>watcher.log</span></div>
+          <ol>
+            <li>[10:21:03] 已点击网页“选择文件”按钮，并把视频交给 ASC 文件选择器。</li>
+            <li>[10:21:25] 检测到灰色占位图：第一位视频正在处理。</li>
+            <li>[10:23:41] 视频预览图已出现：即将移除后台视频并重传。</li>
+            <li>[10:23:43] 已移除后台第一位视频：红色移除按钮。</li>
+          </ol>
+        </div>
+      </section>
+    </main>
+  </div>
+</body>
+</html>

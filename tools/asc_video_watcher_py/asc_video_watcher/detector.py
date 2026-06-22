@@ -226,3 +226,72 @@ REMOVE_FIRST_MEDIA_SCRIPT = r"""
   return { ok: false, message: '悬停后没有找到左上角红色移除按钮' };
 }
 """
+
+
+CLICK_UPLOAD_BUTTON_SCRIPT = r"""
+({ planIndex, planSelector, uploadButtonSelector }) => {
+  const isVisible = (el) => {
+    if (!el) return false;
+    const style = getComputedStyle(el);
+    const rect = el.getBoundingClientRect();
+    return style.visibility !== 'hidden' && style.display !== 'none' && rect.width >= 8 && rect.height >= 8;
+  };
+
+  const textOf = (el) => [
+    el.getAttribute('aria-label') || '',
+    el.getAttribute('title') || '',
+    el.textContent || ''
+  ].join(' ').trim();
+
+  const queryVisible = (root, selector) => {
+    if (!selector) return [];
+    try {
+      return Array.from(root.querySelectorAll(selector)).filter(isVisible);
+    } catch (_) {
+      return [];
+    }
+  };
+
+  const findPlans = () => {
+    if (planSelector) {
+      const custom = queryVisible(document, planSelector);
+      if (custom.length) return custom;
+    }
+    return Array.from(document.querySelectorAll('section, form, fieldset, div')).filter((el) => {
+      if (!isVisible(el)) return false;
+      const text = textOf(el);
+      const rect = el.getBoundingClientRect();
+      return rect.width > 500 &&
+        rect.height > 160 &&
+        /选择文件/.test(text) &&
+        /全部删除/.test(text) &&
+        /App 预览|张截屏|截图/.test(text);
+    }).sort((a, b) => {
+      const ar = a.getBoundingClientRect();
+      const br = b.getBoundingClientRect();
+      return ar.top - br.top || ar.left - br.left;
+    });
+  };
+
+  const plans = findPlans();
+  const plan = plans[Math.max(0, Number(planIndex) || 0)] || null;
+  if (!plan) return { ok: false, message: '没有找到测试方案' };
+
+  let button = queryVisible(plan, uploadButtonSelector)[0];
+  if (!button) {
+    button = Array.from(plan.querySelectorAll('button, [role="button"], a, label')).filter((el) => {
+      if (!isVisible(el) || el.disabled || el.getAttribute('aria-disabled') === 'true') return false;
+      return /选择文件|上传|choose file|upload/i.test(textOf(el));
+    }).sort((a, b) => {
+      const ar = a.getBoundingClientRect();
+      const br = b.getBoundingClientRect();
+      return ar.top - br.top || ar.left - br.left;
+    })[0];
+  }
+
+  if (!button) return { ok: false, message: '没有找到“选择文件”按钮' };
+  button.scrollIntoView({ block: 'center', inline: 'center' });
+  button.click();
+  return { ok: true, message: textOf(button) || '已点击选择文件按钮' };
+}
+"""
