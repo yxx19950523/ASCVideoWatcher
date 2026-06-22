@@ -84,6 +84,16 @@
       font-size: 13px;
       background: #fff;
     }
+    select {
+      width: 100%;
+      min-height: 34px;
+      border: 1px solid #c4ccd8;
+      border-radius: 6px;
+      padding: 7px 9px;
+      font: inherit;
+      font-size: 13px;
+      background: #fff;
+    }
     .two {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -263,18 +273,14 @@
               <input value="0">
             </div>
           </div>
-        </section>
-
-        <section>
-          <div class="section-title">页面定位</div>
-          <label>测试方案选择器（可选）</label>
-          <input placeholder="默认自动找第一个测试方案">
-          <label>第一位媒体选择器（可选）</label>
-          <input placeholder="默认自动取媒体条最左侧">
-          <label>网页“选择文件”按钮选择器（可选）</label>
-          <input placeholder="默认点击测试方案里的“选择文件”">
-          <label>红色移除按钮选择器（可选）</label>
-          <input placeholder="默认悬停第一位媒体后找左上角红色按钮">
+          <label>浏览器</label>
+          <select>
+            <option>chrome</option>
+            <option>msedge</option>
+            <option>chromium</option>
+            <option>firefox</option>
+            <option>webkit</option>
+          </select>
         </section>
 
         <section>
@@ -296,6 +302,28 @@
           <div class="metric"><span>总计时</span><strong>03:18</strong></div>
           <div class="metric"><span>下次检测</span><strong>12 秒</strong></div>
           <div class="metric"><span>循环次数</span><strong>7</strong></div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">高级选择器（默认不用填）</div>
+          <div class="two">
+            <div>
+              <label>测试方案选择器</label>
+              <input placeholder="默认自动找第一个测试方案">
+            </div>
+            <div>
+              <label>第一位媒体选择器</label>
+              <input placeholder="默认自动取媒体条最左侧">
+            </div>
+            <div>
+              <label>网页“选择文件”按钮选择器</label>
+              <input placeholder="默认点击测试方案里的“选择文件”">
+            </div>
+            <div>
+              <label>红色移除按钮选择器</label>
+              <input placeholder="默认悬停第一位媒体后找左上角按钮">
+            </div>
+          </div>
         </div>
 
         <div class="card">

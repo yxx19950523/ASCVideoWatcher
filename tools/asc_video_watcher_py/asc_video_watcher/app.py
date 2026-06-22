@@ -135,7 +135,7 @@ class WatcherApp:
         body.grid(row=1, column=0, sticky="nsew")
         body.columnconfigure(0, weight=0)
         body.columnconfigure(1, weight=1)
-        body.rowconfigure(2, weight=1)
+        body.rowconfigure(3, weight=1)
 
         form = ttk.LabelFrame(body, text="设置", padding=12)
         form.grid(row=0, column=0, rowspan=3, sticky="nsw", padx=(0, 12))
@@ -167,22 +167,24 @@ class WatcherApp:
             ("产品优化页面地址", self.product_url_var, 42),
             ("刷新间隔（秒）", self.refresh_var, 12),
             ("测试方案序号（0=第一个）", self.plan_index_var, 12),
-            ("测试方案选择器（可选）", self.plan_selector_var, 42),
-            ("第一位媒体选择器（可选）", self.media_selector_var, 42),
-            ("网页“选择文件”按钮选择器（可选）", self.upload_button_selector_var, 42),
-            ("备用上传 input 选择器", self.upload_selector_var, 42),
-            ("灰色占位选择器（可选）", self.placeholder_var, 42),
-            ("预览图选择器（可选）", self.preview_var, 42),
-            ("红色移除按钮选择器（可选）", self.remove_selector_var, 42),
-            ("删除确认按钮选择器（可选）", self.confirm_selector_var, 42),
-            ("浏览器 chrome/msedge/chromium", self.browser_var, 42),
         ]
         for row, (label, var, width) in enumerate(fields):
             base_row = row * 2 + 1
             ttk.Label(form, text=label).grid(row=base_row, column=0, sticky="w", pady=(0 if row == 0 else 7, 3))
             ttk.Entry(form, textvariable=var, width=width).grid(row=base_row + 1, column=0, sticky="ew")
 
-        checkbox_row = len(fields) * 2 + 1
+        browser_row = len(fields) * 2 + 1
+        ttk.Label(form, text="浏览器").grid(row=browser_row, column=0, sticky="w", pady=(7, 3))
+        browser_combo = ttk.Combobox(
+            form,
+            textvariable=self.browser_var,
+            values=("chrome", "msedge", "chromium", "firefox", "webkit"),
+            state="readonly",
+            width=39,
+        )
+        browser_combo.grid(row=browser_row + 1, column=0, sticky="ew")
+
+        checkbox_row = browser_row + 2
         ttk.Checkbutton(form, text="预览出现后移除后台视频并重传同一个视频", variable=self.auto_cycle_var).grid(row=checkbox_row, column=0, sticky="w", pady=(10, 0))
         ttk.Checkbutton(form, text="系统/应用通知", variable=self.notify_var).grid(row=checkbox_row + 1, column=0, sticky="w", pady=(5, 0))
         ttk.Checkbutton(form, text="声音提示", variable=self.sound_var).grid(row=checkbox_row + 2, column=0, sticky="w", pady=(5, 0))
@@ -217,8 +219,27 @@ class WatcherApp:
         ttk.Label(hint, text="先在 App Store Connect 手动切到主语言国家，并停留在包含测试方案的页面；程序默认处理页面中的第一个测试方案。").grid(row=0, column=0, sticky="w")
         ttk.Label(hint, text="视频上传后会排到第一位。程序监控第一位媒体：灰色占位响一次，预览图出现再响一次，然后悬停并点击左上角红色移除按钮。").grid(row=1, column=0, sticky="w", pady=(5, 0))
 
+        advanced = ttk.LabelFrame(body, text="高级选择器（默认不用填）", padding=12)
+        advanced.grid(row=2, column=1, sticky="ew", pady=(0, 12))
+        advanced.columnconfigure((0, 1), weight=1)
+        advanced_fields = [
+            ("测试方案选择器", self.plan_selector_var),
+            ("第一位媒体选择器", self.media_selector_var),
+            ("网页“选择文件”按钮选择器", self.upload_button_selector_var),
+            ("备用上传 input 选择器", self.upload_selector_var),
+            ("灰色占位选择器", self.placeholder_var),
+            ("预览图选择器", self.preview_var),
+            ("红色移除按钮选择器", self.remove_selector_var),
+            ("删除确认按钮选择器", self.confirm_selector_var),
+        ]
+        for index, (label, var) in enumerate(advanced_fields):
+            row = (index // 2) * 2
+            col = index % 2
+            ttk.Label(advanced, text=label).grid(row=row, column=col, sticky="w", padx=(0 if col == 0 else 10, 0), pady=(0 if row == 0 else 7, 3))
+            ttk.Entry(advanced, textvariable=var).grid(row=row + 1, column=col, sticky="ew", padx=(0 if col == 0 else 10, 0))
+
         log_frame = ttk.LabelFrame(body, text="运行日志", padding=8)
-        log_frame.grid(row=2, column=1, sticky="nsew")
+        log_frame.grid(row=3, column=1, sticky="nsew")
         log_frame.rowconfigure(0, weight=1)
         log_frame.columnconfigure(0, weight=1)
         self.log_text = tk.Text(log_frame, height=18, wrap="word", state="disabled")
@@ -351,14 +372,19 @@ class WatcherApp:
 
     async def watch(self) -> None:
         async with async_playwright() as p:
+            browser_choice = self.settings.browser_channel
             browser_type = p.chromium
+            if browser_choice == "firefox":
+                browser_type = p.firefox
+            elif browser_choice == "webkit":
+                browser_type = p.webkit
             launch_args = {
                 "headless": False,
                 "user_data_dir": str(self.profile_dir),
                 "viewport": {"width": 1440, "height": 900},
             }
-            if self.settings.browser_channel in {"chrome", "msedge", "chromium"}:
-                launch_args["channel"] = self.settings.browser_channel
+            if browser_choice in {"chrome", "msedge"}:
+                launch_args["channel"] = browser_choice
             try:
                 context = await browser_type.launch_persistent_context(**launch_args)
             except Exception as exc:
