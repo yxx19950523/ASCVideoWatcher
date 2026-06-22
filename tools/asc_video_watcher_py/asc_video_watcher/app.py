@@ -452,6 +452,12 @@ class WatcherApp:
                     result = await self.detect_first_media(page)
                     self.events.put(("phase", result))
 
+                    if uploaded and result.get("phase") == "no_video":
+                        uploaded = False
+                        self.events.put(("log", "检测到后台已经没有 App 预览视频，可能已被手动删除；下一轮将重新上传。"))
+                        await page.wait_for_timeout(1000)
+                        continue
+
                     if uploaded and result.get("phase") == "ready" and self.settings.auto_cycle:
                         removed = await self.remove_remote_video(page)
                         self.events.put(("removed", removed))
@@ -629,6 +635,11 @@ class WatcherApp:
             total = fmt_duration(time.time() - self.started_at)
             stage = fmt_duration(time.time() - self.placeholder_at) if self.placeholder_at else "--"
             self.notify("视频预览图已出现", f"总耗时 {total}，占位图阶段 {stage}。即将移除后台视频并重传。", "ready")
+        elif phase == "no_video":
+            self.last_phase = "idle"
+            self.status_var.set("未检测到视频")
+            self.phase_var.set("后台没有 App 预览视频，准备重新上传")
+            self.notice_var.set("未检测到视频：下一轮会重新上传当前选择的视频")
         elif phase == "waiting" and self.last_phase == "idle":
             self.phase_var.set(result.get("reason") or "等待第一位媒体变化")
 

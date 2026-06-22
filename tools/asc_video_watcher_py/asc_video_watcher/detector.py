@@ -74,8 +74,20 @@ FIRST_MEDIA_STATUS_SCRIPT = r"""
   }
 
   const media = findFirstMedia(plan);
+  const planText = textOf(plan);
+  const previewCounter = planText.match(/(\d+)\s*\/\s*\d+\s*个\s*App\s*预览/);
+  const appPreviewCount = previewCounter ? Number(previewCounter[1]) : null;
+  if (appPreviewCount === 0) {
+    return {
+      phase: 'no_video',
+      reason: '测试方案中没有 App 预览视频',
+      planCount: plans.length,
+      appPreviewCount
+    };
+  }
+
   if (!media) {
-    return { phase: 'waiting', reason: '没有找到第一位媒体', planCount: plans.length };
+    return { phase: 'waiting', reason: '没有找到第一位媒体', planCount: plans.length, appPreviewCount };
   }
 
   const customPlaceholder = placeholderSelector ? queryVisible(media, placeholderSelector).length : 0;
@@ -104,6 +116,7 @@ FIRST_MEDIA_STATUS_SCRIPT = r"""
     phase,
     reason: '',
     planCount: plans.length,
+    appPreviewCount,
     rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
     text: label.slice(0, 120),
     background: bg
