@@ -418,9 +418,10 @@ class WatcherApp:
             while not self.stop_event.is_set():
                 self.next_refresh_at = time.time() + self.settings.refresh_seconds
                 try:
-                    self.events.put(("log", "刷新网页，准备执行本轮监听。"))
-                    await page.reload(wait_until="domcontentloaded", timeout=60000)
-                    await page.wait_for_timeout(1800)
+                    if uploaded:
+                        self.events.put(("log", "刷新网页，准备执行本轮监听。"))
+                        await page.reload(wait_until="domcontentloaded", timeout=60000)
+                        await page.wait_for_timeout(3000)
 
                     if not uploaded:
                         uploaded = await self.upload_video(page)
@@ -449,7 +450,22 @@ class WatcherApp:
 
     async def upload_video(self, page) -> bool:
         try:
-            async with page.expect_file_chooser(timeout=5000) as chooser_info:
+            await page.wait_for_timeout(1500)
+            text_button = page.get_by_text("选择文件", exact=True)
+            text_count = await text_button.count()
+            if text_count:
+                index = min(self.settings.plan_index, text_count - 1)
+                async with page.expect_file_chooser(timeout=8000) as chooser_info:
+                    await text_button.nth(index).click()
+                chooser = await chooser_info.value
+                await chooser.set_files(self.video_path)
+                self.events.put(("log", f"已点击第 {index + 1} 个“选择文件”按钮，并把视频交给 ASC 文件选择器。"))
+                return True
+        except Exception as exc:
+            self.events.put(("log", f"直接点击“选择文件”失败，尝试 DOM 定位：{exc}"))
+
+        try:
+            async with page.expect_file_chooser(timeout=8000) as chooser_info:
                 result = await page.evaluate(CLICK_UPLOAD_BUTTON_SCRIPT, {
                     "planIndex": self.settings.plan_index,
                     "planSelector": self.settings.plan_selector,
