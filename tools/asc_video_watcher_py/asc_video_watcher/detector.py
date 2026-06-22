@@ -27,15 +27,30 @@ FIRST_MEDIA_STATUS_SCRIPT = r"""
       const custom = queryVisible(document, planSelector);
       if (custom.length) return custom;
     }
-    const all = Array.from(document.querySelectorAll('section, form, fieldset, div')).filter(isVisible);
-    const plans = all.filter((el) => {
+    const seen = new Set();
+    const plans = [];
+    const addPlan = (el) => {
+      if (!el || seen.has(el)) return;
+      seen.add(el);
+      plans.push(el);
+    };
+    const climbToPlan = (el) => {
+      let node = el;
+      for (let i = 0; node && i < 10; i += 1, node = node.parentElement) {
+        if (!isVisible(node)) continue;
+        const rect = node.getBoundingClientRect();
+        const text = textOf(node);
+        if (rect.width > 500 && rect.height > 130 && /选择文件|全部删除|App 预览|张截屏|截图|测试方案/.test(text)) {
+          return node;
+        }
+      }
+      return null;
+    };
+    Array.from(document.querySelectorAll('button, [role="button"], a, label, span, div')).forEach((el) => {
       const text = textOf(el);
-      const rect = el.getBoundingClientRect();
-      return rect.width > 500 &&
-        rect.height > 160 &&
-        /选择文件/.test(text) &&
-        /全部删除/.test(text) &&
-        /App 预览|张截屏|截图/.test(text);
+      if (/选择文件|全部删除|App 预览|张截屏|截图|测试方案/.test(text) || /\d+\s*\/\s*\d+\s*个\s*App\s*预览/.test(text)) {
+        addPlan(climbToPlan(el));
+      }
     });
     return plans.sort((a, b) => {
       const ar = a.getBoundingClientRect();
@@ -154,16 +169,32 @@ REMOVE_FIRST_MEDIA_SCRIPT = r"""
       const custom = queryVisible(document, planSelector);
       if (custom.length) return custom;
     }
-    return Array.from(document.querySelectorAll('section, form, fieldset, div')).filter((el) => {
-      if (!isVisible(el)) return false;
+    const seen = new Set();
+    const plans = [];
+    const addPlan = (el) => {
+      if (!el || seen.has(el)) return;
+      seen.add(el);
+      plans.push(el);
+    };
+    const climbToPlan = (el) => {
+      let node = el;
+      for (let i = 0; node && i < 10; i += 1, node = node.parentElement) {
+        if (!isVisible(node)) continue;
+        const rect = node.getBoundingClientRect();
+        const text = textOf(node);
+        if (rect.width > 500 && rect.height > 130 && /选择文件|全部删除|App 预览|张截屏|截图|测试方案/.test(text)) {
+          return node;
+        }
+      }
+      return null;
+    };
+    Array.from(document.querySelectorAll('button, [role="button"], a, label, span, div')).forEach((el) => {
       const text = textOf(el);
-      const rect = el.getBoundingClientRect();
-      return rect.width > 500 &&
-        rect.height > 160 &&
-        /选择文件/.test(text) &&
-        /全部删除/.test(text) &&
-        /App 预览|张截屏|截图/.test(text);
-    }).sort((a, b) => {
+      if (/选择文件|全部删除|App 预览|张截屏|截图|测试方案/.test(text) || /\d+\s*\/\s*\d+\s*个\s*App\s*预览/.test(text)) {
+        addPlan(climbToPlan(el));
+      }
+    });
+    return plans.sort((a, b) => {
       const ar = a.getBoundingClientRect();
       const br = b.getBoundingClientRect();
       return ar.top - br.top || ar.left - br.left;
@@ -270,16 +301,32 @@ CLICK_UPLOAD_BUTTON_SCRIPT = r"""
       const custom = queryVisible(document, planSelector);
       if (custom.length) return custom;
     }
-    return Array.from(document.querySelectorAll('section, form, fieldset, div')).filter((el) => {
-      if (!isVisible(el)) return false;
+    const seen = new Set();
+    const plans = [];
+    const addPlan = (el) => {
+      if (!el || seen.has(el)) return;
+      seen.add(el);
+      plans.push(el);
+    };
+    const climbToPlan = (el) => {
+      let node = el;
+      for (let i = 0; node && i < 10; i += 1, node = node.parentElement) {
+        if (!isVisible(node)) continue;
+        const rect = node.getBoundingClientRect();
+        const text = textOf(node);
+        if (rect.width > 500 && rect.height > 130 && /选择文件|全部删除|App 预览|张截屏|截图|测试方案/.test(text)) {
+          return node;
+        }
+      }
+      return null;
+    };
+    Array.from(document.querySelectorAll('button, [role="button"], a, label, span, div')).forEach((el) => {
       const text = textOf(el);
-      const rect = el.getBoundingClientRect();
-      return rect.width > 500 &&
-        rect.height > 160 &&
-        /选择文件/.test(text) &&
-        /全部删除/.test(text) &&
-        /App 预览|张截屏|截图/.test(text);
-    }).sort((a, b) => {
+      if (/选择文件|全部删除|App 预览|张截屏|截图|测试方案/.test(text) || /\d+\s*\/\s*\d+\s*个\s*App\s*预览/.test(text)) {
+        addPlan(climbToPlan(el));
+      }
+    });
+    return plans.sort((a, b) => {
       const ar = a.getBoundingClientRect();
       const br = b.getBoundingClientRect();
       return ar.top - br.top || ar.left - br.left;
