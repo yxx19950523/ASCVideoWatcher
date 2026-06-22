@@ -156,6 +156,13 @@ class WatcherApp:
         self.notify_var = tk.BooleanVar()
         self.sound_var = tk.BooleanVar()
 
+        video_box = ttk.LabelFrame(form, text="第 1 步：选择视频", padding=10)
+        video_box.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+        video_box.columnconfigure(0, weight=1)
+        self.selected_video_var = tk.StringVar(value="尚未选择视频")
+        ttk.Label(video_box, textvariable=self.selected_video_var, width=34).grid(row=0, column=0, sticky="ew", padx=(0, 8))
+        ttk.Button(video_box, text="选择视频...", command=self.pick_video).grid(row=0, column=1, sticky="e")
+
         fields = [
             ("产品优化页面地址", self.product_url_var, 42),
             ("刷新间隔（秒）", self.refresh_var, 12),
@@ -171,10 +178,11 @@ class WatcherApp:
             ("浏览器 chrome/msedge/chromium", self.browser_var, 42),
         ]
         for row, (label, var, width) in enumerate(fields):
-            ttk.Label(form, text=label).grid(row=row * 2, column=0, sticky="w", pady=(0 if row == 0 else 7, 3))
-            ttk.Entry(form, textvariable=var, width=width).grid(row=row * 2 + 1, column=0, sticky="ew")
+            base_row = row * 2 + 1
+            ttk.Label(form, text=label).grid(row=base_row, column=0, sticky="w", pady=(0 if row == 0 else 7, 3))
+            ttk.Entry(form, textvariable=var, width=width).grid(row=base_row + 1, column=0, sticky="ew")
 
-        checkbox_row = len(fields) * 2
+        checkbox_row = len(fields) * 2 + 1
         ttk.Checkbutton(form, text="预览出现后移除后台视频并重传同一个视频", variable=self.auto_cycle_var).grid(row=checkbox_row, column=0, sticky="w", pady=(10, 0))
         ttk.Checkbutton(form, text="系统/应用通知", variable=self.notify_var).grid(row=checkbox_row + 1, column=0, sticky="w", pady=(5, 0))
         ttk.Checkbutton(form, text="声音提示", variable=self.sound_var).grid(row=checkbox_row + 2, column=0, sticky="w", pady=(5, 0))
@@ -182,11 +190,10 @@ class WatcherApp:
         buttons = ttk.Frame(form)
         buttons.grid(row=checkbox_row + 3, column=0, sticky="ew", pady=(12, 0))
         buttons.columnconfigure((0, 1), weight=1)
-        self.start_btn = ttk.Button(buttons, text="开始循环", command=self.start)
-        self.start_btn.grid(row=0, column=0, sticky="ew", padx=(0, 6), pady=(0, 8))
+        self.start_btn = ttk.Button(buttons, text="下一步：打开页面并开始循环", command=self.start)
+        self.start_btn.grid(row=0, column=0, columnspan=2, sticky="ew", pady=(0, 8))
         self.stop_btn = ttk.Button(buttons, text="停止", command=self.stop, state="disabled")
-        self.stop_btn.grid(row=0, column=1, sticky="ew", padx=(6, 0), pady=(0, 8))
-        ttk.Button(buttons, text="选择一个视频", command=self.pick_video).grid(row=1, column=0, sticky="ew", padx=(0, 6))
+        self.stop_btn.grid(row=1, column=0, sticky="ew", padx=(0, 6))
         ttk.Button(buttons, text="打开日志", command=self.open_logs).grid(row=1, column=1, sticky="ew", padx=(6, 0))
 
         metrics = ttk.LabelFrame(body, text="状态", padding=12)
@@ -285,6 +292,7 @@ class WatcherApp:
         )
         if path:
             self.video_path = path
+            self.selected_video_var.set(Path(path).name)
             self.video_var.set(Path(path).name)
             self.log(f"已选择视频：{path}")
 
