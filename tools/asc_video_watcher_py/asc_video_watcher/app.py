@@ -189,6 +189,11 @@ class WatcherApp:
         checkbox_row = browser_row + 2
         ttk.Checkbutton(form, text="预览出现后移除后台视频并重传同一个视频", variable=self.auto_cycle_var).grid(row=checkbox_row, column=0, sticky="w", pady=(10, 0))
         ttk.Checkbutton(form, text="声音提示", variable=self.sound_var).grid(row=checkbox_row + 1, column=0, sticky="w", pady=(5, 0))
+        sound_test = ttk.Frame(form)
+        sound_test.grid(row=checkbox_row + 2, column=0, sticky="ew", pady=(8, 0))
+        sound_test.columnconfigure((0, 1), weight=1)
+        ttk.Button(sound_test, text="测试占位音", command=lambda: self.play_sound("placeholder")).grid(row=0, column=0, sticky="ew", padx=(0, 6))
+        ttk.Button(sound_test, text="测试预览音", command=lambda: self.play_sound("ready")).grid(row=0, column=1, sticky="ew", padx=(6, 0))
 
         buttons = ttk.Frame(form)
         buttons.grid(row=checkbox_row + 3, column=0, sticky="ew", pady=(12, 0))
@@ -278,12 +283,20 @@ class WatcherApp:
             self.next_refresh_var.set(f"{seconds} 秒")
 
     def play_sound(self, kind: str = "info") -> None:
+        threading.Thread(target=self._play_sound_worker, args=(kind,), daemon=True).start()
+
+    def _play_sound_worker(self, kind: str = "info") -> None:
         try:
             if platform.system() == "Windows":
                 import winsound
-                frequency = 660 if kind == "placeholder" else 1040 if kind == "ready" else 880
-                duration = 260 if kind == "placeholder" else 420 if kind == "ready" else 220
+                alias = "SystemAsterisk" if kind == "placeholder" else "SystemExclamation"
+                frequency = 650 if kind == "placeholder" else 1200 if kind == "ready" else 900
+                duration = 220 if kind == "placeholder" else 360 if kind == "ready" else 220
+                winsound.PlaySound(alias, winsound.SND_ALIAS | winsound.SND_ASYNC)
+                time.sleep(0.08)
                 winsound.Beep(frequency, duration)
+                if kind == "ready":
+                    winsound.Beep(frequency + 180, duration)
                 return
             if platform.system() == "Darwin":
                 sound = "/System/Library/Sounds/Ping.aiff" if kind == "placeholder" else "/System/Library/Sounds/Glass.aiff"
